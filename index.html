@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Suivi Chantier</title>
+<meta name="theme-color" content="#073b2a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Suivi Chantier">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
+#app{position:fixed;inset:0;border:0;width:100%;height:100%;display:block;background:#073b2a}
+#wait{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#e2f3ea;font:600 16px Arial,sans-serif;pointer-events:none}
+#wait[hidden]{display:none}
+</style>
+</head>
+<body>
+<div id="wait">Chargement de Suivi Chantier…</div>
+<iframe id="app" title="Suivi Chantier" src="https://script.google.com/macros/s/AKfycbxSG8rKK2wT4kazHNf4a1O_d72vowQAjfW--ehpkdWRVjxqiUogOkJYdiW890TzIH7I/exec" allow="geolocation; web-share; clipboard-write; camera; fullscreen"></iframe>
+<script>
+// Page de lancement de Suivi Chantier.
+// Elle affiche l'application et garde la connexion mémorisée : ce site est ouvert directement, donc le téléphone ne l'efface pas,
+// contrairement au cadre Google dans lequel l'application tourne.
+// Seuls les messages venant de l'application Google (…-script.googleusercontent.com) sont acceptés.
+(function(){
+  var KEY='sc_auth_v1';
+  var fromApp=function(origin){return /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(origin);};
+  var read=function(){try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){return null;}};
+  var wait=document.getElementById('wait');
+  window.addEventListener('message',function(e){
+    if(!fromApp(e.origin))return;
+    var d=e.data||{};if(!d.sc)return;
+    if(d.type==='sc-hello'){
+      wait.hidden=true;
+      var a=read();
+      if(a&&a.prenom&&a.password&&e.source)e.source.postMessage({sc:1,type:'sc-auth',auth:a},e.origin);
+    }else if(d.type==='sc-save-auth'){
+      var x=d.auth||{};
+      if(x.prenom&&x.password){try{localStorage.setItem(KEY,JSON.stringify({prenom:String(x.prenom),password:String(x.password)}));}catch(err){}}
+    }else if(d.type==='sc-clear-auth'){
+      try{localStorage.removeItem(KEY);}catch(err){}
+    }
+  });
+  document.getElementById('app').addEventListener('load',function(){setTimeout(function(){wait.hidden=true;},2000);});
+  // Demande au navigateur de ne pas effacer les données de ce site (Android).
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+})();
+</script>
+</body>
+</html>
