@@ -60,7 +60,11 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
     var h=Math.min(p.getBoundingClientRect().height,screenH-top);
     if(h>200)f.style.height=Math.round(h)+'px';
   };
-  fit();window.addEventListener('resize',fit);window.addEventListener('orientationchange',function(){setTimeout(fit,300);});
+  // Au tout premier instant, l'iPhone donne des mesures fausses sans prévenir quand elles deviennent justes :
+  // on recalcule donc plusieurs fois après l'ouverture, et au retour dans l'application.
+  var refit=function(){fit();setTimeout(fit,300);setTimeout(fit,1500);setTimeout(fit,5000);};
+  refit();window.addEventListener('resize',fit);window.addEventListener('orientationchange',function(){setTimeout(fit,300);});
+  window.addEventListener('pageshow',refit);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')refit();});
   document.getElementById('app').addEventListener('load',function(){setTimeout(function(){wait.hidden=true;},2000);});
   // Demande au navigateur de ne pas effacer les données de ce site (Android).
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
