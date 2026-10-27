@@ -14,7 +14,10 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
-html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
+/* DIAGNOSTIC TEMPORAIRE (bande en bas sur iPhone) : fond gris sous l'application, ligne de mesures cachée derrière elle. */
+html,body{margin:0;height:100%;background:#9aa0a6;overflow:hidden}
+#diag{position:absolute;left:0;right:0;z-index:0;padding:6px 10px;font:600 12px/1.35 Arial,sans-serif;color:#111;text-align:center;pointer-events:none}
+#app{z-index:1}
 #app{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);border:0;width:100%;height:calc(100% - env(safe-area-inset-top,0px));height:calc(100dvh - env(safe-area-inset-top,0px));display:block;background:#073b2a}
 #probe{position:fixed;left:0;top:0;width:1px;height:100dvh;visibility:hidden;pointer-events:none}
 #wait{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#e2f3ea;font:600 16px Arial,sans-serif;pointer-events:none}
@@ -23,6 +26,7 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
 </head>
 <body>
 <div id="probe"></div>
+<div id="diag"></div>
 <div id="wait">Chargement de Suivi Chantier…</div>
 <iframe id="app" title="Suivi Chantier" src="https://script.google.com/macros/s/AKfycbxSG8rKK2wT4kazHNf4a1O_d72vowQAjfW--ehpkdWRVjxqiUogOkJYdiW890TzIH7I/exec" allow="geolocation; web-share; clipboard-write; camera; fullscreen"></iframe>
 <script>
@@ -60,7 +64,18 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
     var h=Math.min(p.getBoundingClientRect().height,screenH-top);
     if(h>200)f.style.height=Math.round(h)+'px';
   };
-  fit();window.addEventListener('resize',fit);window.addEventListener('orientationchange',function(){setTimeout(fit,300);});
+  // DIAGNOSTIC TEMPORAIRE : écrit les mesures juste sous l'application. Invisible si l'application remplit l'écran.
+  var diag=function(){
+    var d=document.getElementById('diag'),f=document.getElementById('app'),p=document.getElementById('probe');if(!d||!f||!p)return;
+    var r=f.getBoundingClientRect(),vv=window.visualViewport;
+    d.style.top=Math.round(r.bottom+2)+'px';
+    d.textContent='L128b · écran d\'accueil='+(navigator.standalone===true?'oui':'non')+' · écran='+screen.width+'×'+screen.height+
+      ' · annoncée='+window.innerHeight+' · html='+document.documentElement.clientHeight+' · dvh='+Math.round(p.getBoundingClientRect().height)+
+      (vv?' · vv='+Math.round(vv.height):'')+' · haut='+Math.round(r.top)+' · appli='+Math.round(r.height)+' · bas='+Math.round(r.bottom)+' · dpr='+window.devicePixelRatio;
+  };
+  var fitAndDiag=function(){fit();diag();};
+  fitAndDiag();setTimeout(fitAndDiag,1500);setTimeout(fitAndDiag,5000);
+  window.addEventListener('resize',fitAndDiag);window.addEventListener('orientationchange',function(){setTimeout(fitAndDiag,300);});
   document.getElementById('app').addEventListener('load',function(){setTimeout(function(){wait.hidden=true;},2000);});
   // Demande au navigateur de ne pas effacer les données de ce site (Android).
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
