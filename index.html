@@ -15,12 +15,14 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
 html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
-#app{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:0;border:0;width:100%;height:calc(100% - env(safe-area-inset-top,0px));height:calc(100dvh - env(safe-area-inset-top,0px));display:block;background:#073b2a}
+#app{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);border:0;width:100%;height:calc(100% - env(safe-area-inset-top,0px));height:calc(100dvh - env(safe-area-inset-top,0px));display:block;background:#073b2a}
+#probe{position:fixed;left:0;top:0;width:1px;height:100dvh;visibility:hidden;pointer-events:none}
 #wait{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#e2f3ea;font:600 16px Arial,sans-serif;pointer-events:none}
 #wait[hidden]{display:none}
 </style>
 </head>
 <body>
+<div id="probe"></div>
 <div id="wait">Chargement de Suivi Chantier…</div>
 <iframe id="app" title="Suivi Chantier" src="https://script.google.com/macros/s/AKfycbxSG8rKK2wT4kazHNf4a1O_d72vowQAjfW--ehpkdWRVjxqiUogOkJYdiW890TzIH7I/exec" allow="geolocation; web-share; clipboard-write; camera; fullscreen"></iframe>
 <script>
@@ -47,6 +49,18 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
       try{localStorage.removeItem(KEY);}catch(err){}
     }
   });
+  // iPhone (application ajoutée à l'écran d'accueil) : la hauteur annoncée est fausse d'une barre d'état selon le réglage
+  // mémorisé à l'ajout de l'icône. On remplit donc jusqu'en bas en prenant la plus petite des deux mesures :
+  // la hauteur annoncée, et l'écran réel moins la position du haut de l'application.
+  var fit=function(){
+    var f=document.getElementById('app'),p=document.getElementById('probe');if(!f||!p||navigator.standalone!==true)return;
+    f.style.height='';
+    var top=f.getBoundingClientRect().top,land=window.matchMedia('(orientation: landscape)').matches;
+    var screenH=land?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height);
+    var h=Math.min(p.getBoundingClientRect().height,screenH-top);
+    if(h>200)f.style.height=Math.round(h)+'px';
+  };
+  fit();window.addEventListener('resize',fit);window.addEventListener('orientationchange',function(){setTimeout(fit,300);});
   document.getElementById('app').addEventListener('load',function(){setTimeout(function(){wait.hidden=true;},2000);});
   // Demande au navigateur de ne pas effacer les données de ce site (Android).
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
