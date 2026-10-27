@@ -8,13 +8,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Suivi Chantier">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Barre d'état opaque : l'application commence sous l'heure et la batterie (avec « black-translucent », l'iPhone posait la barre par-dessus et raccourcissait l'écran). -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
 html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
-#app{position:fixed;inset:0;border:0;width:100%;height:100%;display:block;background:#073b2a}
+#app{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:0;border:0;width:100%;height:calc(100% - env(safe-area-inset-top,0px));height:calc(100dvh - env(safe-area-inset-top,0px));display:block;background:#073b2a}
 #wait{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#e2f3ea;font:600 16px Arial,sans-serif;pointer-events:none}
 #wait[hidden]{display:none}
 </style>
