@@ -68,7 +68,11 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
         return navigator.serviceWorker.ready;}).then(function(){return N.messaging;});},
     getToken:function(){return N.init().then(function(m){return m.getToken({vapidKey:VAPID,serviceWorkerRegistration:N.reg});})
       .then(function(t){if(!t)throw new Error('Aucun identifiant reçu de Firebase.');N.token=t;store.set('sc_notif_off',null);N.post({type:'sc-notif-token',token:t,device:N.device()});N.sendState();return t;});},
-    onUser:function(src,origin,role){N.app=src;N.appOrigin=origin;
+    // V24.19.132 : notification touchée → ce qu'il faut ouvrir (?go=suivi&id=… ou ?go=rapport), transmis après la connexion.
+    open:null,
+    readOpen:function(href){try{var u=new URL(href,location.href),go=u.searchParams.get('go');return go?{go:go,id:u.searchParams.get('id')||''}:null;}catch(e){return null;}},
+    sendOpen:function(){if(N.open&&N.app){N.post({type:'sc-open',go:N.open.go,id:N.open.id});N.open=null;}},
+    onUser:function(src,origin,role){N.app=src;N.appOrigin=origin;N.sendOpen();
       // V24.19.131 : le profil Lecteur n'est pas concerné par les notifications.
       if(role==='lecteur'){N.loggedIn=false;N.hideBar();return;}
       N.loggedIn=true;
@@ -83,6 +87,9 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
     off:function(){store.set('sc_notif_off','1');var t=N.token;N.token='';
       (N.messaging&&t?N.messaging.deleteToken().catch(function(){}):Promise.resolve()).then(function(){N.sendState();});}
   };
+  N.open=N.readOpen(location.href);if(N.open){try{history.replaceState(null,'',location.pathname);}catch(e){}}
+  // Application déjà ouverte : le fichier de réception transmet la notification touchée sans recharger la page.
+  try{if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',function(e){var d=e.data||{};if(d.scOpen){N.open=N.readOpen(d.scOpen);N.sendOpen();}});}catch(e){}
   document.getElementById('notifYes').addEventListener('click',function(){
     if(N.busy)return;N.busy=true;var txt=document.getElementById('notifText');
     // La demande d'autorisation doit partir directement du toucher (exigence de l'iPhone).
