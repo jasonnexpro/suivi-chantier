@@ -68,7 +68,10 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
         return navigator.serviceWorker.ready;}).then(function(){return N.messaging;});},
     getToken:function(){return N.init().then(function(m){return m.getToken({vapidKey:VAPID,serviceWorkerRegistration:N.reg});})
       .then(function(t){if(!t)throw new Error('Aucun identifiant reçu de Firebase.');N.token=t;store.set('sc_notif_off',null);N.post({type:'sc-notif-token',token:t,device:N.device()});N.sendState();return t;});},
-    onUser:function(src,origin){N.app=src;N.appOrigin=origin;N.loggedIn=true;
+    onUser:function(src,origin,role){N.app=src;N.appOrigin=origin;
+      // V24.19.131 : le profil Lecteur n'est pas concerné par les notifications.
+      if(role==='lecteur'){N.loggedIn=false;N.hideBar();return;}
+      N.loggedIn=true;
       if(N.permission()==='granted'&&store.get('sc_notif_off')!=='1'){N.getToken().catch(function(e){N.sendState(e.message||String(e));});return;}
       N.showBar(false);},
     showBar:function(force){var b=document.getElementById('notifBar');if(!b||!N.loggedIn&&!force)return;
@@ -102,9 +105,9 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
     }else if(d.type==='sc-clear-auth'){
       try{localStorage.removeItem(KEY);}catch(err){}
       N.loggedIn=false;N.hideBar();
-    }else if(d.type==='sc-user'){N.onUser(e.source,e.origin);
+    }else if(d.type==='sc-user'){N.onUser(e.source,e.origin,String(d.role||''));
     }else if(d.type==='sc-notif-status-req'){N.app=e.source;N.appOrigin=e.origin;N.sendState();
-    }else if(d.type==='sc-notif-ask'){N.app=e.source;N.appOrigin=e.origin;N.showBar(true);
+    }else if(d.type==='sc-notif-ask'){N.app=e.source;N.appOrigin=e.origin;if(N.loggedIn)N.showBar(true);
     }else if(d.type==='sc-notif-off'){N.app=e.source;N.appOrigin=e.origin;N.off();
     }
   });
