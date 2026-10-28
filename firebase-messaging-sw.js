@@ -10,7 +10,8 @@ self.addEventListener('notificationclick',function(event){
   if(!d||!d.scLink)return; // les notifications envoyées par Firebase sont gérées par Firebase
   event.notification.close();
   event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(function(list){
-    for(var i=0;i<list.length;i++){if(list[i].url.indexOf(self.registration.scope)===0&&'focus' in list[i])return list[i].focus();}
+    // V24.19.132 : application déjà ouverte → on la ramène devant et on lui dit quoi ouvrir (chantier ou rapport).
+    for(var i=0;i<list.length;i++){if(list[i].url.indexOf(self.registration.scope)===0&&'focus' in list[i]){var c=list[i];try{c.postMessage({scOpen:d.scLink});}catch(e){}return c.focus();}}
     return self.clients.openWindow(d.scLink);
   }));
 });
