@@ -19,11 +19,18 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
 #probe{position:fixed;left:0;top:0;width:1px;height:100dvh;visibility:hidden;pointer-events:none}
 #wait{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#e2f3ea;font:600 16px Arial,sans-serif;pointer-events:none}
 #wait[hidden]{display:none}
+/* V24.19.129 — barre « Activer les notifications » (sur la page de lancement : l'iPhone n'accepte la demande que d'ici) */
+#notifBar{position:fixed;left:10px;right:10px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:10;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;color:#073b2a;border:2px solid #087a4b;border-radius:14px;padding:10px 12px;box-shadow:0 8px 28px rgba(0,0,0,.35);font:700 14px/1.3 Arial,sans-serif;max-width:560px;margin:0 auto}
+#notifBar[hidden]{display:none}
+#notifBar span{flex:1;min-width:170px}
+#notifBar button{border:0;border-radius:10px;padding:10px 14px;font:800 14px Arial,sans-serif;cursor:pointer;min-height:42px}
+#notifYes{background:#087a4b;color:#fff}#notifLater{background:#eef3f0;color:#073b2a}
 </style>
 </head>
 <body>
 <div id="probe"></div>
 <div id="wait">Chargement de Suivi Chantier…</div>
+<div id="notifBar" role="dialog" aria-label="Notifications" hidden><span id="notifText">🔔 Recevoir les notifications de tes chantiers sur cet appareil ?</span><button type="button" id="notifYes">Activer</button><button type="button" id="notifLater">Plus tard</button></div>
 <iframe id="app" title="Suivi Chantier" src="https://script.google.com/macros/s/AKfycbxSG8rKK2wT4kazHNf4a1O_d72vowQAjfW--ehpkdWRVjxqiUogOkJYdiW890TzIH7I/exec" allow="geolocation; web-share; clipboard-write; camera; fullscreen"></iframe>
 <script>
 // Page de lancement de Suivi Chantier.
@@ -35,6 +42,53 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
   var fromApp=function(origin){return /^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(origin);};
   var read=function(){try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){return null;}};
   var wait=document.getElementById('wait');
+  // V24.19.129 — notifications (Firebase Cloud Messaging).
+  // L'autorisation se demande ici, sur la page principale. L'identifiant de l'appareil (« jeton ») est transmis à l'application,
+  // qui l'enregistre sur le serveur avec le compte connecté.
+  var FB_CONFIG={apiKey:"AIzaSyBjJ565gjZ0lxOk5x3Fk_2lzFRAbUzqGXo",authDomain:"suivi-chantier-40f33.firebaseapp.com",projectId:"suivi-chantier-40f33",storageBucket:"suivi-chantier-40f33.firebasestorage.app",messagingSenderId:"830512319094",appId:"1:830512319094:web:8caadaf5d1946d95322d57"};
+  var VAPID="BIySzGq2JBzoAZVFzWFvvJtvILir2LU7GAWe00hAF6N9_myR78OE_yMf8OE0vWiEefOs0HMSYiAkq_vbApoWCYE";
+  var FB_V='10.12.2';
+  var store={get:function(k){try{return localStorage.getItem(k);}catch(e){return null;}},set:function(k,v){try{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}catch(e){}}};
+  var N={app:null,appOrigin:'',loggedIn:false,token:'',busy:false,
+    ios:/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),
+    supported:function(){return 'Notification' in window&&'serviceWorker' in navigator&&'PushManager' in window;},
+    reason:function(){if(N.supported())return '';return N.ios&&navigator.standalone!==true?'ios-browser':'unsupported';},
+    permission:function(){return N.supported()?Notification.permission:'unsupported';},
+    device:function(){var u=navigator.userAgent;if(/iPhone/.test(u))return 'iPhone';if(/iPad/.test(u)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))return 'iPad';if(/Android/.test(u))return 'Android';if(/Windows/.test(u))return 'Ordinateur (Windows)';if(/Macintosh/.test(u))return 'Ordinateur (Mac)';return 'Appareil';},
+    post:function(msg){if(!N.app)return;try{msg.sc=1;N.app.postMessage(msg,N.appOrigin);}catch(e){}},
+    sendState:function(err){N.post({type:'sc-notif-state',state:{supported:N.supported(),reason:N.reason(),permission:N.permission(),active:!!N.token&&N.permission()==='granted',device:N.device(),error:err||''}});},
+    load:function(src){return new Promise(function(ok,ko){var s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=function(){ko(new Error('Chargement impossible : '+src));};document.head.appendChild(s);});},
+    messaging:null,reg:null,
+    init:function(){if(N.messaging)return Promise.resolve(N.messaging);
+      return N.load('https://www.gstatic.com/firebasejs/'+FB_V+'/firebase-app-compat.js').then(function(){return N.load('https://www.gstatic.com/firebasejs/'+FB_V+'/firebase-messaging-compat.js');})
+      .then(function(){return navigator.serviceWorker.register('firebase-messaging-sw.js',{scope:'./'});})
+      .then(function(reg){N.reg=reg;if(!firebase.apps.length)firebase.initializeApp(FB_CONFIG);N.messaging=firebase.messaging();
+        // Application ouverte : Firebase n'affiche rien tout seul, on montre donc la notification nous-mêmes.
+        N.messaging.onMessage(function(p){var n=p.notification||{};try{N.reg.showNotification(n.title||'Suivi Chantier',{body:n.body||'',icon:'icon-192.png',badge:'icon-192.png',data:{scLink:(p.fcmOptions&&p.fcmOptions.link)||location.href}});}catch(e){}});
+        return navigator.serviceWorker.ready;}).then(function(){return N.messaging;});},
+    getToken:function(){return N.init().then(function(m){return m.getToken({vapidKey:VAPID,serviceWorkerRegistration:N.reg});})
+      .then(function(t){if(!t)throw new Error('Aucun identifiant reçu de Firebase.');N.token=t;store.set('sc_notif_off',null);N.post({type:'sc-notif-token',token:t,device:N.device()});N.sendState();return t;});},
+    onUser:function(src,origin){N.app=src;N.appOrigin=origin;N.loggedIn=true;
+      if(N.permission()==='granted'&&store.get('sc_notif_off')!=='1'){N.getToken().catch(function(e){N.sendState(e.message||String(e));});return;}
+      N.showBar(false);},
+    showBar:function(force){var b=document.getElementById('notifBar');if(!b||!N.loggedIn&&!force)return;
+      if(!N.supported()||N.permission()==='denied'){if(force)N.sendState();return;}
+      if(N.permission()==='granted'){if(force)N.getToken().catch(function(e){N.sendState(e.message||String(e));});return;}
+      if(!force){if(store.get('sc_notif_off')==='1')return;var until=Number(store.get('sc_notif_later')||0);if(until&&Date.now()<until)return;}
+      b.hidden=false;},
+    hideBar:function(){var b=document.getElementById('notifBar');if(b)b.hidden=true;},
+    off:function(){store.set('sc_notif_off','1');var t=N.token;N.token='';
+      (N.messaging&&t?N.messaging.deleteToken().catch(function(){}):Promise.resolve()).then(function(){N.sendState();});}
+  };
+  document.getElementById('notifYes').addEventListener('click',function(){
+    if(N.busy)return;N.busy=true;var txt=document.getElementById('notifText');
+    // La demande d'autorisation doit partir directement du toucher (exigence de l'iPhone).
+    Promise.resolve(Notification.requestPermission()).then(function(p){
+      if(p!=='granted'){N.hideBar();N.sendState();return;}
+      txt.textContent='⏳ Activation…';return N.getToken().then(function(){N.hideBar();});
+    }).catch(function(e){txt.textContent='⚠️ Activation impossible : '+(e.message||e);N.sendState(e.message||String(e));setTimeout(N.hideBar,6000);})
+    .then(function(){N.busy=false;});});
+  document.getElementById('notifLater').addEventListener('click',function(){store.set('sc_notif_later',String(Date.now()+7*86400000));N.hideBar();});
   window.addEventListener('message',function(e){
     if(!fromApp(e.origin))return;
     var d=e.data||{};if(!d.sc)return;
@@ -47,6 +101,11 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
       if(x.prenom&&x.password){try{localStorage.setItem(KEY,JSON.stringify({prenom:String(x.prenom),password:String(x.password)}));}catch(err){}}
     }else if(d.type==='sc-clear-auth'){
       try{localStorage.removeItem(KEY);}catch(err){}
+      N.loggedIn=false;N.hideBar();
+    }else if(d.type==='sc-user'){N.onUser(e.source,e.origin);
+    }else if(d.type==='sc-notif-status-req'){N.app=e.source;N.appOrigin=e.origin;N.sendState();
+    }else if(d.type==='sc-notif-ask'){N.app=e.source;N.appOrigin=e.origin;N.showBar(true);
+    }else if(d.type==='sc-notif-off'){N.app=e.source;N.appOrigin=e.origin;N.off();
     }
   });
   // iPhone (application ajoutée à l'écran d'accueil) : la hauteur annoncée est fausse d'une barre d'état selon le réglage
