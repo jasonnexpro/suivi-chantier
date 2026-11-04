@@ -52,8 +52,9 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
 <div id="lsplash" role="status" aria-label="Chargement de Suivi Chantier"><svg viewBox="0 0 100 100" aria-hidden="true"><path class="tri" d="M50 10 L90 84 L10 84 Z"/><path class="tri2" d="M50 46 L65 73 L35 73 Z"/></svg><div class="w" id="lsWord"></div><div class="s">Triangle Énergie</div><div class="bar"><i></i></div><div class="slow" id="lsSlow"></div></div>
 <script>
 // V24.19.188 : couleurs de l'apparence choisie dans l'appli (retenues à la dernière ouverture), lettres animées.
-(function(){var s=document.getElementById('lsplash'),look='classic',still=false;try{look=localStorage.getItem('sc_l_look')||'classic';still=localStorage.getItem('sc_l_still')==='1';}catch(e){}
- if(!still&&window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)still=true;
+(function(){var s=document.getElementById('lsplash'),look='classic',still=false,sv=null;try{look=localStorage.getItem('sc_l_look')||'classic';sv=localStorage.getItem('sc_l_still');still=sv==='1';}catch(e){}
+ // V24.19.190 : le choix « Animations » fait dans l'appli passe avant le réglage de Windows / du téléphone (comme dans l'appli)
+ if(sv===null&&window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)still=true;
  if(look==='navy'||look==='glass')s.classList.add(look);if(still)s.classList.add('still');
  var w='Suivi Chantier',h='';for(var i=0;i<w.length;i++){var c=w.charAt(i);h+='<span style="animation-delay:'+(0.3+i*0.045).toFixed(3)+'s">'+(c===' '?'&nbsp;':c)+'</span>';}document.getElementById('lsWord').innerHTML=h;})();
 </script>
