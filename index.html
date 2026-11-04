@@ -137,6 +137,7 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
   window.addEventListener('message',function(e){
     if(!fromApp(e.origin))return;
     var d=e.data||{};if(!d.sc)return;
+    if(d.type==='sc-lsplash-ask'){if(!gone&&e.source)e.source.postMessage({sc:1,type:'sc-lsplash-yes'},e.origin);return;}// V24.19.189
     if(d.type==='sc-ready'){saveLook(d);hideSplash();return;}
     if(d.type==='sc-look'){saveLook(d);return;}
     if(d.type==='sc-hello'){
