@@ -68,7 +68,7 @@ html,body{margin:0;height:100%;background:#073b2a;overflow:hidden}
     if(running)return;running=true;var out=[];var vv=window.visualViewport;
     out.push('dehors : fenêtre '+window.innerWidth+'×'+window.innerHeight+'  écran '+screen.width+'×'+screen.height+'  appli(standalone)='+navigator.standalone);
     out.push('cadre = hauteur du cadre vu de dehors ; app = hauteur que l\'appli annonce dedans ; écart = bande');
-    res.textContent=out.join('\n');var e0=null;
+    var w=0;while(!last&&w<45){res.textContent='attente de l\'appli… ('+w+' s)\n(connecte-toi si l\'écran de connexion est affiché)';await sleep(1000);w++;}res.textContent=out.join('\n');var e0=null;
     for(var i=0;i<EX.length;i++){
       base();await sleep(1200);last=(EX[i][0].indexOf('E2')===0)?null:last;await EX[i][1]();await sleep(2500);
       var r=f.getBoundingClientRect(),m=last,line;
